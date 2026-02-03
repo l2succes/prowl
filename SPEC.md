@@ -198,6 +198,55 @@ openclaw-conductor/
 - [ ] Session templates/presets
 - [ ] Model selector per session
 
+### Phase 5: File Browser
+- [ ] File tree panel (collapsible, in sidebar or separate panel)
+- [ ] Show workspace root with expandable directories
+- [ ] File viewer panel (read-only, with syntax highlighting)
+- [ ] Recent files section (files modified in current session)
+- [ ] Click file in tool use blocks to view it
+- [ ] Show file path being read/written in tool results
+
+**Implementation Notes:**
+- Use gateway `read` tool or add a new `files.list` / `files.read` API
+- For now, can parse tool use blocks to track which files agent is working on
+- Monaco editor or CodeMirror for file viewer (syntax highlighting)
+- Tree component: build simple one or use react-arborist
+
+**File Browser UI:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Sessions  │  Files                                         │
+├────────────┼───────────────────────────────────────────────┤
+│  ▼ Dev     │  📁 openclaw-conductor/                        │
+│  ▼ Research│     📁 src/                                    │
+│            │        📁 components/                          │
+│            │           📄 App.tsx                           │
+│            │           📄 Sidebar.tsx  ← (recently edited)  │
+│            │        📁 hooks/                               │
+│            │        📄 main.tsx                             │
+│            │     📄 package.json                            │
+│            │     📄 SPEC.md  ✏️                              │
+│            │                                                │
+│  [+ New]   │  ── Recently Modified ──                       │
+│            │  📄 src/App.tsx (2 min ago)                    │
+│            │  📄 src/components/Chat.tsx (5 min ago)        │
+└────────────┴────────────────────────────────────────────────┘
+```
+
+**File Viewer (opens in split or modal):**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  📄 src/components/Chat/ChatPanel.tsx              [×]      │
+├─────────────────────────────────────────────────────────────┤
+│  1  import React from 'react';                              │
+│  2  import { useChat } from '../../hooks/useChat';          │
+│  3                                                          │
+│  4  export function ChatPanel({ sessionKey }: Props) {      │
+│  5    const { messages, send } = useChat(sessionKey);       │
+│  ...                                                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
 ## Gateway Connection Details
 
 **URL**: `ws://localhost:18789` (or via ngrok: `wss://breezy.ngrok.dev`)

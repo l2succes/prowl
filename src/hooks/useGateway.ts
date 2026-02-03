@@ -8,6 +8,7 @@ import {
   ConnectParams,
 } from '@/lib/protocol';
 import { uuid } from '@/lib/utils';
+import { extractFileTouches } from '@/lib/fileTracking';
 
 interface UseGatewayOptions {
   url: string;
@@ -28,50 +29,78 @@ export function useGateway({ url, token }: UseGatewayOptions) {
     setStreaming,
     appendStreamingContent,
     updateSession,
+    addFileTouch,
   } = useAppStore();
 
   // Handle events
   const handleEvent = useCallback((event: GatewayEvent) => {
     const payload = event.payload || {};
+    
     switch (event.event) {
-      case 'chat.message':
-        // New message in a session
-        if (payload.sessionId && payload.message) {
-          addMessage(payload.sessionId, payload.message);
-          updateSession(payload.sessionId, {
-            lastActive: new Date().toISOString(),
-            messageCount: 1, // This should be incremented properly
-          });
-        }
-        break;
-
-      case 'chat.delta':
-        // Streaming token
-        if (payload.sessionId && payload.delta) {
-          appendStreamingContent(payload.delta);
-          updateSession(payload.sessionId, { status: 'streaming' });
-        }
-        break;
-
-      case 'chat.complete':
-        // Response finished
-        if (payload.sessionId) {
+      case 'chat': {
+        // Chat events have state: delta | final | aborted | error
+        const { sessionKey, state, message, errorMessage } = payload;
+        
+        if (!sessionKey) break;
+        
+        if (state === 'delta' && message) {
+          // Streaming delta - message contains the partial content
+          // Extract text from message.content if present
+          const content = message.content;
+          if (Array.isArray(content)) {
+            for (const block of content) {
+              if (block.type === 'text' && block.text) {
+                appendStreamingContent(block.text);
+              }
+            }
+          } else if (typeof message === 'string') {
+            appendStreamingContent(message);
+          }
+          updateSession(sessionKey, { status: 'streaming' });
+        } else if (state === 'final' && message) {
+          // Final message - add complete message to history
+          const formattedMessage = {
+            id: message.id || uuid(),
+            role: message.role || 'assistant',
+            content: Array.isArray(message.content) 
+              ? message.content 
+              : [{ type: 'text', text: String(message.content || '') }],
+            timestamp: message.timestamp || new Date().toISOString(),
+          };
+          
+          addMessage(sessionKey, formattedMessage);
           setStreaming(null);
-          updateSession(payload.sessionId, { status: 'idle' });
+          updateSession(sessionKey, { 
+            status: 'idle',
+            lastActive: new Date().toISOString(),
+          });
+
+          // Track file touches from tool use
+          const fileTouches = extractFileTouches(formattedMessage);
+          fileTouches.forEach((touch) => {
+            addFileTouch(sessionKey, touch);
+          });
+        } else if (state === 'aborted' || state === 'error') {
+          console.log('Chat aborted/error:', errorMessage);
+          setStreaming(null);
+          updateSession(sessionKey, { status: 'idle' });
         }
         break;
+      }
 
-      case 'session.updated':
-        // Session metadata changed
-        if (payload.session) {
-          updateSession(payload.session.id, payload.session);
-        }
+      case 'presence':
+        // Presence update - ignore for now
+        break;
+
+      case 'agent':
+        // Agent state update
+        console.log('Agent event:', payload);
         break;
 
       default:
         console.log('Unhandled event:', event.event, payload);
     }
-  }, [addMessage, appendStreamingContent, setStreaming, updateSession]);
+  }, [addMessage, appendStreamingContent, setStreaming, updateSession, addFileTouch]);
 
   // Handle incoming messages
   const handleMessage = useCallback((event: MessageEvent) => {
@@ -141,13 +170,13 @@ export function useGateway({ url, token }: UseGatewayOptions) {
             minProtocol: 3,
             maxProtocol: 3,
             client: {
-              id: 'conductor',
+              id: 'webchat',
               version: '0.1.0',
               platform: 'web',
-              mode: 'operator',
+              mode: 'webchat',
             },
             role: 'operator',
-            scopes: ['operator.read', 'operator.write'],
+            scopes: ['operator.read', 'operator.write', 'operator.admin'],
             auth: { token },
           };
 
@@ -174,11 +203,27 @@ export function useGateway({ url, token }: UseGatewayOptions) {
                 type: 'req',
                 id: listId,
                 method: 'sessions.list',
+                params: {
+                  includeGlobal: true,
+                  limit: 50,
+                },
               };
 
               pendingRequestsRef.current.set(listId, (listResponse: GatewayResponse) => {
                 if (!listResponse.error && listResponse.result) {
-                  setSessions(listResponse.result);
+                  // Transform gateway sessions to our format
+                  // Gateway returns sessions with 'key' as identifier
+                  const sessions = (listResponse.result.sessions || listResponse.result || []).map((s: any) => ({
+                    id: s.key || s.id,
+                    key: s.key || s.id,
+                    label: s.label || s.key,
+                    created: s.created || new Date().toISOString(),
+                    lastActive: s.lastActive || new Date().toISOString(),
+                    messageCount: s.messageCount || 0,
+                    status: 'idle',
+                  }));
+                  setSessions(sessions);
+                  console.log('Loaded sessions:', sessions);
                 }
               });
 

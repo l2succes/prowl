@@ -6,9 +6,10 @@ import ToolResultBlock from './ToolResultBlock';
 
 interface MessageProps {
   message: MessageType;
+  onFileClick?: (path: string) => void;
 }
 
-export default function Message({ message }: MessageProps) {
+export default function Message({ message, onFileClick }: MessageProps) {
   const isUser = message.role === 'user';
 
   return (
@@ -58,6 +59,7 @@ export default function Message({ message }: MessageProps) {
                 key={idx}
                 name={content.name}
                 input={content.input}
+                onFileClick={onFileClick}
               />
             );
           }

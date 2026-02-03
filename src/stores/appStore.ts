@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { Session, Message } from '@/lib/protocol';
 
+export interface FileTouch {
+  path: string;
+  action: 'read' | 'write' | 'edit';
+  timestamp: number;
+}
+
 interface AppState {
   // Connection
   connected: boolean;
@@ -27,6 +33,10 @@ interface AppState {
   setMessages: (sessionId: string, messages: Message[]) => void;
   addMessage: (sessionId: string, message: Message) => void;
 
+  // File tracking
+  recentFiles: Record<string, FileTouch[]>; // sessionId -> files
+  addFileTouch: (sessionId: string, file: FileTouch) => void;
+
   // Streaming state
   streamingSessionId: string | null;
   streamingContent: string;
@@ -51,12 +61,12 @@ export const useAppStore = create<AppState>((set) => ({
   updateSession: (sessionId, updates) =>
     set((state) => ({
       sessions: state.sessions.map((s) =>
-        s.id === sessionId ? { ...s, ...updates } : s
+        (s.key === sessionId || s.id === sessionId) ? { ...s, ...updates } : s
       ),
     })),
   deleteSession: (sessionId) =>
     set((state) => ({
-      sessions: state.sessions.filter((s) => s.id !== sessionId),
+      sessions: state.sessions.filter((s) => s.key !== sessionId && s.id !== sessionId),
       activeSessions: state.activeSessions.filter((id) => id !== sessionId),
       currentSessionId:
         state.currentSessionId === sessionId
@@ -105,6 +115,22 @@ export const useAppStore = create<AppState>((set) => ({
         [sessionId]: [...(state.messages[sessionId] || []), message],
       },
     })),
+
+  // File tracking
+  recentFiles: {},
+  addFileTouch: (sessionId, file) =>
+    set((state) => {
+      const sessionFiles = state.recentFiles[sessionId] || [];
+      // Remove existing entry for the same path
+      const filteredFiles = sessionFiles.filter((f) => f.path !== file.path);
+      // Add new entry at the beginning
+      return {
+        recentFiles: {
+          ...state.recentFiles,
+          [sessionId]: [file, ...filteredFiles],
+        },
+      };
+    }),
 
   // Streaming
   streamingSessionId: null,

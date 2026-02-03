@@ -28,14 +28,16 @@ export interface GatewayEvent {
 export type GatewayMessage = GatewayRequest | GatewayResponse | GatewayEvent;
 
 // Connect params
+// Valid client.id: webchat-ui | clawdbot-control-ui | webchat | cli | gateway-client | clawdbot-macos | node-host | test | fingerprint | clawdbot-probe
+// Valid client.mode: webchat | cli | ui | backend | node | probe | test
 export interface ConnectParams {
   minProtocol: number;
   maxProtocol: number;
   client: {
-    id: string;
+    id: 'webchat-ui' | 'webchat' | 'cli' | 'clawdbot-control-ui' | 'gateway-client' | 'clawdbot-macos' | 'node-host' | 'test' | 'fingerprint' | 'clawdbot-probe';
     version: string;
     platform: string;
-    mode: string;
+    mode: 'webchat' | 'cli' | 'ui' | 'backend' | 'node' | 'probe' | 'test';
   };
   role: string;
   scopes: string[];
@@ -45,12 +47,14 @@ export interface ConnectParams {
 }
 
 // Session types
+// Gateway uses 'key' as the primary identifier
 export interface Session {
-  id: string;
+  id: string; // Alias for key (for UI convenience)
+  key: string; // Session key (primary identifier used by gateway)
   label?: string;
-  created: string;
-  lastActive: string;
-  messageCount: number;
+  created?: string;
+  lastActive?: string;
+  messageCount?: number;
   status?: 'active' | 'idle' | 'streaming';
 }
 

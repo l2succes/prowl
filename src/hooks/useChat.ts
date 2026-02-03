@@ -4,7 +4,7 @@ import { uuid } from '@/lib/utils';
 import { Message, MessageContent } from '@/lib/protocol';
 
 interface UseChatOptions {
-  sessionId: string;
+  sessionId: string; // This is actually the sessionKey
   sendRequest: (method: string, params?: any) => Promise<any>;
 }
 
@@ -20,9 +20,25 @@ export function useChat({ sessionId, sendRequest }: UseChatOptions) {
   // Load message history for session
   const loadHistory = useCallback(async () => {
     try {
-      const history = await sendRequest('sessions.history', { sessionId });
-      if (history && Array.isArray(history)) {
-        setMessages(sessionId, history);
+      // chat.history uses sessionKey (we're using sessionId as the key)
+      const result = await sendRequest('chat.history', { 
+        sessionKey: sessionId,
+        limit: 100,
+      });
+      
+      // Result contains messages array
+      if (result && result.messages && Array.isArray(result.messages)) {
+        // Transform gateway messages to our format
+        const messages: Message[] = result.messages.map((msg: any) => ({
+          id: msg.id || uuid(),
+          role: msg.role,
+          content: typeof msg.content === 'string' 
+            ? [{ type: 'text', text: msg.content }]
+            : msg.content,
+          timestamp: msg.timestamp || new Date().toISOString(),
+          toolUse: msg.toolUse,
+        }));
+        setMessages(sessionId, messages);
       }
     } catch (error) {
       console.error('Failed to load history:', error);
@@ -33,10 +49,17 @@ export function useChat({ sessionId, sendRequest }: UseChatOptions) {
   const sendMessage = useCallback(
     async (text: string, images?: ImageAttachment[]) => {
       try {
-        // Build message content array
+        // Build attachments array for images
+        const attachments = images?.map(img => ({
+          type: 'image',
+          mediaType: img.mimeType,
+          data: img.data.replace(/^data:image\/[^;]+;base64,/, ''),
+        }));
+
+        // Create user message for local display
         const content: MessageContent[] = [];
         
-        // Add images first (if any)
+        // Add images to content for display
         if (images && images.length > 0) {
           for (const img of images) {
             content.push({
@@ -50,12 +73,11 @@ export function useChat({ sessionId, sendRequest }: UseChatOptions) {
           }
         }
         
-        // Add text if present
+        // Add text
         if (text.trim()) {
           content.push({ type: 'text', text });
         }
 
-        // Create user message for local display
         const userMessage: Message = {
           id: uuid(),
           role: 'user',
@@ -73,17 +95,20 @@ export function useChat({ sessionId, sendRequest }: UseChatOptions) {
         // Initialize streaming state
         setStreaming(sessionId, '');
 
-        // Send to gateway
+        // Send to gateway - chat.send expects:
+        // - sessionKey: string (required)
+        // - message: string (required) - just the text
+        // - idempotencyKey: string (required)
+        // - attachments: array (optional)
         await sendRequest('chat.send', {
-          sessionId,
-          message: {
-            role: 'user',
-            content,
-          },
+          sessionKey: sessionId,
+          message: text,
+          idempotencyKey: uuid(),
+          ...(attachments && attachments.length > 0 && { attachments }),
         });
 
-        // Subscribe to streaming responses
-        await sendRequest('chat.stream', { sessionId });
+        // Response will come via events (chat.message, chat.delta, chat.complete)
+        // No need to call chat.stream - it's automatic
       } catch (error) {
         console.error('Failed to send message:', error);
         setStreaming(null);

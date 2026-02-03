@@ -3,9 +3,10 @@ import Message from './Message';
 
 interface MessageListProps {
   sessionId: string;
+  onFileClick?: (path: string) => void;
 }
 
-export default function MessageList({ sessionId }: MessageListProps) {
+export default function MessageList({ sessionId, onFileClick }: MessageListProps) {
   const { messages, streamingSessionId, streamingContent } = useAppStore();
   const sessionMessages = messages[sessionId] || [];
 
@@ -18,7 +19,7 @@ export default function MessageList({ sessionId }: MessageListProps) {
       )}
 
       {sessionMessages.map((message) => (
-        <Message key={message.id} message={message} />
+        <Message key={message.id} message={message} onFileClick={onFileClick} />
       ))}
 
       {streamingSessionId === sessionId && streamingContent && (

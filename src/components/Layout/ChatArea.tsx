@@ -4,16 +4,17 @@ import ChatPanel from '../Chat/ChatPanel';
 
 interface ChatAreaProps {
   sendRequest: (method: string, params?: any) => Promise<any>;
+  onFileClick?: (path: string) => void;
 }
 
-export default function ChatArea({ sendRequest }: ChatAreaProps) {
+export default function ChatArea({ sendRequest, onFileClick }: ChatAreaProps) {
   const { currentSessionId } = useAppStore();
 
   return (
     <div className="flex-1 flex flex-col">
       <TabBar />
       {currentSessionId ? (
-        <ChatPanel sessionId={currentSessionId} sendRequest={sendRequest} />
+        <ChatPanel sessionId={currentSessionId} sendRequest={sendRequest} onFileClick={onFileClick} />
       ) : (
         <div className="flex-1 flex items-center justify-center text-muted-foreground">
           <div className="text-center">

@@ -1,29 +1,35 @@
 import { useAppStore } from '@/stores/appStore';
 import SessionList from './SessionList';
+import FileList from './FileList';
 import { uuid } from '@/lib/utils';
 
 interface SidebarProps {
   sendRequest: (method: string, params?: any) => Promise<any>;
+  onFileClick: (path: string) => void;
 }
 
-export default function Sidebar({ sendRequest }: SidebarProps) {
+export default function Sidebar({ sendRequest, onFileClick }: SidebarProps) {
   const { connected, connectionError, addSession, openSession } = useAppStore();
 
-  const handleCreateSession = async () => {
-    try {
-      const sessionId = uuid();
-      const result = await sendRequest('sessions.create', {
-        sessionId,
-        label: `Session ${new Date().toLocaleTimeString()}`,
-      });
-
-      if (result && result.session) {
-        addSession(result.session);
-        openSession(result.session.id);
-      }
-    } catch (error) {
-      console.error('Failed to create session:', error);
-    }
+  const handleCreateSession = () => {
+    // Generate a unique session key (webchat style)
+    // Sessions are created implicitly by chat.send - no API call needed
+    const sessionKey = `conductor-${uuid()}`;
+    const label = `Session ${new Date().toLocaleTimeString()}`;
+    
+    // Add session to local state
+    // The actual session will be created on the gateway when the first message is sent
+    addSession({
+      id: sessionKey,
+      key: sessionKey,
+      label,
+      created: new Date().toISOString(),
+      lastActive: new Date().toISOString(),
+      status: 'idle',
+      messageCount: 0,
+    });
+    
+    openSession(sessionKey);
   };
 
   return (
@@ -44,6 +50,9 @@ export default function Sidebar({ sendRequest }: SidebarProps) {
 
       {/* Session List */}
       <SessionList />
+
+      {/* File List */}
+      <FileList onFileClick={onFileClick} />
 
       {/* New Session Button */}
       <div className="p-4 border-t border-border mt-auto">
