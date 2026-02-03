@@ -73,10 +73,9 @@ function App() {
         if (messages[sessionId] && messages[sessionId].length > 0) continue;
         
         try {
-          const result = await sendRequest('sessions.history', {
+          const result = await sendRequest('chat.history', {
             sessionKey: sessionId,
             limit: 100,
-            includeTools: true,
           });
           
           if (result && result.messages) {

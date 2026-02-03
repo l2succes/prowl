@@ -16,10 +16,9 @@ export default function SessionList({ sendRequest }: SessionListProps) {
     // Fetch history if we don't have messages for this session yet
     if (!messages[sessionId] || messages[sessionId].length === 0) {
       try {
-        const result = await sendRequest('sessions.history', {
+        const result = await sendRequest('chat.history', {
           sessionKey: sessionId,
           limit: 100,
-          includeTools: true,
         });
         
         if (result && result.messages) {
