@@ -14,8 +14,35 @@ interface ImageAttachment {
   mimeType: string;
 }
 
+// Derive a session name from the first message
+function deriveSessionName(text: string): string {
+  // Clean up the text
+  let name = text.trim();
+  
+  // Remove common prefixes
+  name = name.replace(/^(hey|hi|hello|please|can you|could you|i want to|i need to|help me)\s+/i, '');
+  
+  // Truncate to reasonable length
+  const maxLength = 40;
+  if (name.length > maxLength) {
+    // Try to cut at a word boundary
+    const truncated = name.slice(0, maxLength);
+    const lastSpace = truncated.lastIndexOf(' ');
+    if (lastSpace > 20) {
+      name = truncated.slice(0, lastSpace) + '...';
+    } else {
+      name = truncated + '...';
+    }
+  }
+  
+  // Capitalize first letter
+  name = name.charAt(0).toUpperCase() + name.slice(1);
+  
+  return name;
+}
+
 export function useChat({ sessionId, sendRequest }: UseChatOptions) {
-  const { addMessage, setStreaming, setMessages, updateSession } = useAppStore();
+  const { addMessage, setStreaming, setMessages, updateSession, messages, sessions } = useAppStore();
 
   // Load message history for session
   const loadHistory = useCallback(async () => {
@@ -87,10 +114,26 @@ export function useChat({ sessionId, sendRequest }: UseChatOptions) {
 
         // Add to local state immediately
         addMessage(sessionId, userMessage);
-        updateSession(sessionId, {
-          status: 'active',
-          lastActive: new Date().toISOString(),
-        });
+        
+        // Check if this is the first message - derive session name
+        const sessionMessages = messages[sessionId] || [];
+        const session = sessions.find(s => s.id === sessionId || s.key === sessionId);
+        const isFirstMessage = sessionMessages.length === 0;
+        const hasDefaultName = session?.label?.startsWith('Session ') || !session?.label;
+        
+        if (isFirstMessage && hasDefaultName && text.trim()) {
+          const derivedName = deriveSessionName(text);
+          updateSession(sessionId, {
+            label: derivedName,
+            status: 'active',
+            lastActive: new Date().toISOString(),
+          });
+        } else {
+          updateSession(sessionId, {
+            status: 'active',
+            lastActive: new Date().toISOString(),
+          });
+        }
 
         // Initialize streaming state
         setStreaming(sessionId, '');
