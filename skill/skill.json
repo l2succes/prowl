@@ -1,0 +1,9 @@
+{
+  "name": "prowl",
+  "version": "0.1.0",
+  "description": "Multi-session dashboard for managing parallel AI workstreams",
+  "author": "OpenClaw Community",
+  "repository": "https://github.com/openclaw/prowl",
+  "keywords": ["dashboard", "ui", "sessions", "multi-agent", "workflow"],
+  "license": "MIT"
+}

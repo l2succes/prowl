@@ -14,7 +14,7 @@ export default function Sidebar({ sendRequest, onFileClick }: SidebarProps) {
   const handleCreateSession = () => {
     // Generate a unique session key (webchat style)
     // Sessions are created implicitly by chat.send - no API call needed
-    const sessionKey = `conductor-${uuid()}`;
+    const sessionKey = `prowl-${uuid()}`;
     const label = `Session ${new Date().toLocaleTimeString()}`;
     
     // Add session to local state

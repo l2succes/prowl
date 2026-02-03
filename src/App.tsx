@@ -21,7 +21,7 @@ function App() {
 
   // Load persisted state from localStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem('conductor-state');
+    const stored = localStorage.getItem('prowl-state');
     if (stored) {
       try {
         const { activeSessions, currentSessionId } = JSON.parse(stored);
@@ -43,7 +43,7 @@ function App() {
   useEffect(() => {
     const { activeSessions, currentSessionId } = useAppStore.getState();
     localStorage.setItem(
-      'conductor-state',
+      'prowl-state',
       JSON.stringify({ activeSessions, currentSessionId })
     );
   }, [currentSessionId]);

@@ -1,7 +1,14 @@
 {
-  "name": "openclaw-conductor",
+  "name": "prowl",
   "private": true,
   "version": "0.1.0",
+  "description": "Multi-session dashboard for OpenClaw",
+  "author": "OpenClaw Community",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openclaw/prowl.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
