@@ -1,7 +1,5 @@
-import { useEffect } from 'react';
 import MessageList from './MessageList';
 import InputBox from './InputBox';
-import { useChat } from '@/hooks/useChat';
 
 interface ChatPanelProps {
   sessionId: string;
@@ -10,12 +8,8 @@ interface ChatPanelProps {
 }
 
 export default function ChatPanel({ sessionId, sendRequest, onFileClick }: ChatPanelProps) {
-  const { loadHistory } = useChat({ sessionId, sendRequest });
-
-  // Load message history when session changes
-  useEffect(() => {
-    loadHistory();
-  }, [sessionId, loadHistory]);
+  // History is loaded by App.tsx when sessions are opened
+  // No need to load here - avoids race condition with WebSocket connection
 
   return (
     <div className="flex-1 flex flex-col">

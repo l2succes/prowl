@@ -56,6 +56,16 @@ function App() {
             useAppStore.getState().setCurrentSession(parsed.currentSessionId);
           }
         }
+        
+        // Restore messages for each session
+        if (parsed.messages && typeof parsed.messages === 'object') {
+          const store = useAppStore.getState();
+          Object.entries(parsed.messages).forEach(([sessionId, msgs]) => {
+            if (Array.isArray(msgs) && msgs.length > 0) {
+              store.setMessages(sessionId, msgs as any[]);
+            }
+          });
+        }
       } catch (e) {
         console.error('Failed to load persisted state:', e);
       }
@@ -63,11 +73,13 @@ function App() {
   }, []);
 
   // Fetch history for active sessions when connected
-  
   useEffect(() => {
     if (!connected || activeSessions.length === 0) return;
     
-    const fetchHistoryForSessions = async () => {
+    // Small delay to ensure WebSocket is fully ready after reconnect/HMR
+    const timeoutId = setTimeout(async () => {
+      console.log('Fetching history for sessions:', activeSessions);
+      
       for (const sessionId of activeSessions) {
         // Skip if we already have messages
         if (messages[sessionId] && messages[sessionId].length > 0) continue;
@@ -96,29 +108,41 @@ function App() {
                 addFileTouch(sessionId, touch);
               });
             });
+            
+            console.log(`Loaded ${formattedMessages.length} messages for session:`, sessionId);
           }
         } catch (err) {
-          console.log('Could not fetch history for:', sessionId);
+          console.log('Could not fetch history for:', sessionId, err);
         }
       }
-    };
+    }, 100); // 100ms delay for WebSocket to stabilize
     
-    fetchHistoryForSessions();
+    return () => clearTimeout(timeoutId);
   }, [connected, activeSessions.length]); // Only re-run when connection or session count changes
 
   // Persist state to localStorage whenever it changes
   useEffect(() => {
     // Only persist sessions that are active (open as tabs)
     const activeSessionsData = sessions.filter(s => activeSessions.includes(s.id) || activeSessions.includes(s.key));
+    
+    // Also persist messages for active sessions
+    const messagesData: Record<string, any[]> = {};
+    for (const sessionId of activeSessions) {
+      if (messages[sessionId] && messages[sessionId].length > 0) {
+        messagesData[sessionId] = messages[sessionId];
+      }
+    }
+    
     localStorage.setItem(
       'prowl-state',
       JSON.stringify({ 
         activeSessions, 
         currentSessionId,
         sessions: activeSessionsData,
+        messages: messagesData,
       })
     );
-  }, [currentSessionId, activeSessions, sessions]);
+  }, [currentSessionId, activeSessions, sessions, messages]);
 
   const handleFileClick = (path: string) => {
     setSelectedFilePath(path);
