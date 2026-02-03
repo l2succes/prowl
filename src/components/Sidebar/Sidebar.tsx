@@ -36,8 +36,8 @@ export default function Sidebar({ sendRequest, onFileClick }: SidebarProps) {
     <div className="w-64 border-r border-border flex flex-col bg-card">
       {/* Header */}
       <div className="p-4 border-b border-border">
-        <h1 className="text-xl font-bold">OpenClaw</h1>
-        <p className="text-sm text-muted-foreground">Conductor</p>
+        <h1 className="text-xl font-bold">🐾 Prowl</h1>
+        <p className="text-sm text-muted-foreground">Multi-Session Dashboard</p>
         {!connected && (
           <div className="mt-2 text-xs text-destructive">
             {connectionError || 'Not connected'}

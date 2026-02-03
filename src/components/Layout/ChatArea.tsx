@@ -18,7 +18,7 @@ export default function ChatArea({ sendRequest, onFileClick }: ChatAreaProps) {
       ) : (
         <div className="flex-1 flex items-center justify-center text-muted-foreground">
           <div className="text-center">
-            <h2 className="text-2xl font-bold mb-2">Welcome to OpenClaw Conductor</h2>
+            <h2 className="text-2xl font-bold mb-2">Welcome to Prowl</h2>
             <p>Select a session or create a new one to get started.</p>
           </div>
         </div>
