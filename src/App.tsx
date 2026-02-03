@@ -4,13 +4,22 @@ import ChatArea from './components/Layout/ChatArea';
 import FileViewerModal from './components/FileViewer/FileViewerModal';
 import { useAppStore } from './stores/appStore';
 import { useGateway } from './hooks/useGateway';
+import { extractFileTouches } from '@/lib/fileTracking';
+import { uuid } from '@/lib/utils';
 
 // Gateway configuration
 const GATEWAY_URL = 'ws://localhost:18789';
 const GATEWAY_TOKEN = import.meta.env.VITE_GATEWAY_TOKEN || 'dev-token';
 
 function App() {
-  const { currentSessionId } = useAppStore();
+  const { 
+    currentSessionId, 
+    connected, 
+    activeSessions, 
+    messages, 
+    setMessages, 
+    addFileTouch 
+  } = useAppStore();
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
 
   // Connect to OpenClaw gateway
@@ -24,13 +33,13 @@ function App() {
     const stored = localStorage.getItem('prowl-state');
     if (stored) {
       try {
-        const { activeSessions, currentSessionId } = JSON.parse(stored);
-        if (activeSessions) {
-          activeSessions.forEach((sessionId: string) => {
+        const parsed = JSON.parse(stored);
+        if (parsed.activeSessions) {
+          parsed.activeSessions.forEach((sessionId: string) => {
             useAppStore.getState().openSession(sessionId);
           });
-          if (currentSessionId) {
-            useAppStore.getState().setCurrentSession(currentSessionId);
+          if (parsed.currentSessionId) {
+            useAppStore.getState().setCurrentSession(parsed.currentSessionId);
           }
         }
       } catch (e) {
@@ -38,6 +47,51 @@ function App() {
       }
     }
   }, []);
+
+  // Fetch history for active sessions when connected
+  
+  useEffect(() => {
+    if (!connected || activeSessions.length === 0) return;
+    
+    const fetchHistoryForSessions = async () => {
+      for (const sessionId of activeSessions) {
+        // Skip if we already have messages
+        if (messages[sessionId] && messages[sessionId].length > 0) continue;
+        
+        try {
+          const result = await sendRequest('sessions.history', {
+            sessionKey: sessionId,
+            limit: 100,
+            includeTools: true,
+          });
+          
+          if (result && result.messages) {
+            const formattedMessages = result.messages.map((msg: any) => ({
+              id: msg.id || uuid(),
+              role: msg.role,
+              content: Array.isArray(msg.content) 
+                ? msg.content 
+                : [{ type: 'text', text: String(msg.content || '') }],
+              timestamp: msg.timestamp || new Date().toISOString(),
+            }));
+            
+            setMessages(sessionId, formattedMessages);
+            
+            formattedMessages.forEach((msg: any) => {
+              const fileTouches = extractFileTouches(msg);
+              fileTouches.forEach((touch: any) => {
+                addFileTouch(sessionId, touch);
+              });
+            });
+          }
+        } catch (err) {
+          console.log('Could not fetch history for:', sessionId);
+        }
+      }
+    };
+    
+    fetchHistoryForSessions();
+  }, [connected, activeSessions.length]); // Only re-run when connection or session count changes
 
   // Persist active sessions to localStorage
   useEffect(() => {

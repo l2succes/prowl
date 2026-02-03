@@ -50,7 +50,7 @@ export default function SessionItem({
           </span>
         </div>
         <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
-          {formatTime(session.lastActive)}
+          {session.lastActive ? formatTime(session.lastActive) : ''}
         </span>
       </div>
       <div className="text-xs text-muted-foreground truncate ml-4">

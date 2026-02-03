@@ -49,7 +49,7 @@ export default function Sidebar({ sendRequest, onFileClick }: SidebarProps) {
       </div>
 
       {/* Session List */}
-      <SessionList />
+      <SessionList sendRequest={sendRequest} />
 
       {/* File List */}
       <FileList onFileClick={onFileClick} />
