@@ -24,7 +24,7 @@ export function useGateway({ url, token }: UseGatewayOptions) {
   const {
     setConnected,
     setConnectionError,
-    setSessions,
+    mergeSessions,
     addMessage,
     setStreaming,
     appendStreamingContent,
@@ -222,8 +222,8 @@ export function useGateway({ url, token }: UseGatewayOptions) {
                     messageCount: s.messageCount || 0,
                     status: 'idle',
                   }));
-                  setSessions(sessions);
-                  console.log('Loaded sessions:', sessions);
+                  mergeSessions(sessions);
+                  console.log('Merged sessions from gateway:', sessions.length);
                 }
               });
 
@@ -271,7 +271,7 @@ export function useGateway({ url, token }: UseGatewayOptions) {
         wsRef.current = null;
       }
     };
-  }, [url, token, handleMessage, setConnected, setConnectionError, setSessions]);
+  }, [url, token, handleMessage, setConnected, setConnectionError, mergeSessions]);
 
   return {
     sendRequest,

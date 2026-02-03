@@ -15,7 +15,8 @@ function App() {
   const { 
     currentSessionId, 
     connected, 
-    activeSessions, 
+    activeSessions,
+    sessions,
     messages, 
     setMessages, 
     addFileTouch 
@@ -34,6 +35,19 @@ function App() {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
+        
+        // First, restore the session objects
+        if (parsed.sessions && Array.isArray(parsed.sessions)) {
+          const store = useAppStore.getState();
+          parsed.sessions.forEach((session: any) => {
+            // Only add if not already in the list
+            if (!store.sessions.find(s => s.id === session.id || s.key === session.key)) {
+              store.addSession(session);
+            }
+          });
+        }
+        
+        // Then restore the active tabs
         if (parsed.activeSessions) {
           parsed.activeSessions.forEach((sessionId: string) => {
             useAppStore.getState().openSession(sessionId);
@@ -93,14 +107,19 @@ function App() {
     fetchHistoryForSessions();
   }, [connected, activeSessions.length]); // Only re-run when connection or session count changes
 
-  // Persist active sessions to localStorage
+  // Persist state to localStorage whenever it changes
   useEffect(() => {
-    const { activeSessions, currentSessionId } = useAppStore.getState();
+    // Only persist sessions that are active (open as tabs)
+    const activeSessionsData = sessions.filter(s => activeSessions.includes(s.id) || activeSessions.includes(s.key));
     localStorage.setItem(
       'prowl-state',
-      JSON.stringify({ activeSessions, currentSessionId })
+      JSON.stringify({ 
+        activeSessions, 
+        currentSessionId,
+        sessions: activeSessionsData,
+      })
     );
-  }, [currentSessionId]);
+  }, [currentSessionId, activeSessions, sessions]);
 
   const handleFileClick = (path: string) => {
     setSelectedFilePath(path);

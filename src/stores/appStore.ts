@@ -17,6 +17,7 @@ interface AppState {
   // Sessions
   sessions: Session[];
   setSessions: (sessions: Session[]) => void;
+  mergeSessions: (sessions: Session[]) => void; // Merge without overwriting local sessions
   addSession: (session: Session) => void;
   updateSession: (sessionId: string, updates: Partial<Session>) => void;
   deleteSession: (sessionId: string) => void;
@@ -54,6 +55,24 @@ export const useAppStore = create<AppState>((set) => ({
   // Sessions
   sessions: [],
   setSessions: (sessions) => set({ sessions }),
+  mergeSessions: (newSessions) =>
+    set((state) => {
+      // Keep existing local sessions, add new ones from gateway
+      const existingIds = new Set(state.sessions.map(s => s.id));
+      const existingKeys = new Set(state.sessions.map(s => s.key));
+      const toAdd = newSessions.filter(s => !existingIds.has(s.id) && !existingKeys.has(s.key));
+      
+      // Also update existing sessions with gateway data (e.g., message counts)
+      const updated = state.sessions.map(existing => {
+        const fromGateway = newSessions.find(s => s.id === existing.id || s.key === existing.key);
+        if (fromGateway) {
+          return { ...existing, ...fromGateway, label: existing.label || fromGateway.label };
+        }
+        return existing;
+      });
+      
+      return { sessions: [...updated, ...toAdd] };
+    }),
   addSession: (session) =>
     set((state) => ({
       sessions: [...state.sessions, session],
