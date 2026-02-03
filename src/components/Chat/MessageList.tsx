@@ -1,5 +1,7 @@
 import { useAppStore } from '@/stores/appStore';
 import Message from './Message';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface MessageListProps {
   sessionId: string;
@@ -29,7 +31,9 @@ export default function MessageList({ sessionId, onFileClick }: MessageListProps
           </div>
           <div className="flex-1 space-y-2">
             <div className="prose prose-sm dark:prose-invert max-w-none">
-              {streamingContent}
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {streamingContent}
+              </ReactMarkdown>
               <span className="inline-block w-2 h-4 bg-primary animate-pulse ml-1" />
             </div>
           </div>
